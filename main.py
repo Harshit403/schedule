@@ -364,7 +364,7 @@ async def edit_plan(course_index: int = Form(...), plan_index: int = Form(...), 
             raise HTTPException(status_code=500, detail="Failed to edit plan")
         return RedirectResponse(url="/admin", status_code=303)
     raise HTTPException(status_code=404, detail="Plan not found")
-
+"""
 @app.get("/download/{filename}")
 async def download_pdf(filename: str):
     # Create temp file path
@@ -398,6 +398,17 @@ async def download_pdf(filename: str):
     except Exception as e:
         logger.error(f"Error downloading file: {e}")
         raise HTTPException(status_code=500, detail="Failed to download file")
+"""
+# FastAPI endpoint that returns a short-lived presigned URL
+@app.get("/download/{filename}")
+async def download_pdf(filename: str):
+    url = s3.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": S3_BUCKET, "Key": filename},
+        ExpiresIn=60  # 1 minute
+    )
+    return RedirectResponse(url=url)
+
 
 @app.post("/delete-course")
 async def delete_course(course_index: int = Form(...)):
