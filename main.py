@@ -19,6 +19,8 @@ from starlette.status import HTTP_404_NOT_FOUND
 import logging
 import uvicorn
 import traceback
+from fastapi.responses import RedirectResponse
+from botocore.exceptions import ClientError
 
 load_dotenv()
 
@@ -400,15 +402,19 @@ async def download_pdf(filename: str):
         raise HTTPException(status_code=500, detail="Failed to download file")
 """
 # FastAPI endpoint that returns a short-lived presigned URL
+
 @app.get("/download/{filename}")
 async def download_pdf(filename: str):
-    url = s3.generate_presigned_url(
-        "get_object",
-        Params={"Bucket": S3_BUCKET, "Key": filename},
-        ExpiresIn=60  # 1 minute
-    )
-    return RedirectResponse(url=url)
-
+    try:
+        url = s3.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": S3_BUCKET, "Key": filename},
+            ExpiresIn=60  # 1 minute
+        )
+        return RedirectResponse(url=url)
+    except ClientError as e:
+        logger.error(f"Presign failed: {e}")
+        raise HTTPException(status_code=404, detail="File not found or access denied")
 
 @app.post("/delete-course")
 async def delete_course(course_index: int = Form(...)):
